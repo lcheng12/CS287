@@ -30,41 +30,41 @@ function main()
    -- Test.
 end
 
-function test(W, b, valid_input, valid_output)
-  local size = valid_output:size(1)
+function test(W, b, input, output)
+  local size = output:size(1)
   local output = torch.DoubleTensor(size)
-  local temp = torch.DoubleTensor(#valid_input[1])
+  local temp = torch.DoubleTensor(#input[1])
   local num_correct = 0
   for i = 1, size do
-    truncated = valid_input[{{i,i},{1, valid_input[i]:gt(1):sum()}}][1]
+    truncated = input[{{i,i},{1, input[i]:gt(1):sum()}}][1]
     temp:add(W:index(2,truncated:long()):sum(2), b)
     print(temp)
     local maxval, argmax = temp:max(1)
-    if argmax[1][1] == valid_output[i] then
+    if argmax[1][1] == output[i] then
       num_correct = num_correct + 1
     end
   end
   return num_correct/size
 end
     
-function get_naive_bayes(train_input, train_output, alpha) 
+function get_naive_bayes(input, output, alpha) 
    local W = torch.DoubleTensor(nclasses, nfeatures)
    local b = torch.DoubleTensor(nclasses)
    local F = torch.DoubleTensor(nclasses, nfeatures)
    F:zero()
    b:zero()
 
-   local size = train_input:size(1)
+   local size = input:size(1)
 
    for i = 1, size do
      print(i)
-     b[train_output[i]] = b[train_output[i]] + 1
-     local curr_class = train_output[i]
-     for j = 1, train_input:size(2) do
-       if train_input[i][j] == 1 then
+     b[output[i]] = b[output[i]] + 1
+     local curr_class = output[i]
+     for j = 1, input:size(2) do
+       if input[i][j] == 1 then
          break
        end
-       F[curr_class][train_input[i][j]] = F[curr_class][train_input[i][j]] + 1 
+       F[curr_class][input[i][j]] = F[curr_class][input[i][j]] + 1 
      end
    end
 
