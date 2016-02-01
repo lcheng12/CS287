@@ -34,7 +34,6 @@ function test(W, b, input, output)
   local input = input
   local output = output
   local size = output:size(1)
-  local output = torch.DoubleTensor(size)
   local temp = torch.DoubleTensor(#input[1])
   local num_correct = 0
   for i = 1, size do
