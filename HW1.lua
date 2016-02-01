@@ -31,6 +31,8 @@ function main()
 end
 
 function test(W, b, input, output)
+  local input = input
+  local output = output
   local size = output:size(1)
   local output = torch.DoubleTensor(size)
   local temp = torch.DoubleTensor(#input[1])
@@ -44,40 +46,44 @@ function test(W, b, input, output)
       num_correct = num_correct + 1
     end
   end
+  print(size)
+  print(num_correct)
   return num_correct/size
 end
     
 function get_naive_bayes(input, output, alpha) 
-   local W = torch.DoubleTensor(nclasses, nfeatures)
-   local b = torch.DoubleTensor(nclasses)
-   local F = torch.DoubleTensor(nclasses, nfeatures)
-   F:zero()
-   b:zero()
+  local input = input
+  local output = output
+  local W = torch.DoubleTensor(nclasses, nfeatures)
+  local b = torch.DoubleTensor(nclasses)
+  local F = torch.DoubleTensor(nclasses, nfeatures)
+  F:zero()
+  b:zero()
 
-   local size = input:size(1)
+  local size = input:size(1)
 
-   for i = 1, size do
-     print(i)
-     b[output[i]] = b[output[i]] + 1
-     local curr_class = output[i]
-     for j = 1, input:size(2) do
-       if input[i][j] == 1 then
-         break
-       end
-       F[curr_class][input[i][j]] = F[curr_class][input[i][j]] + 1 
-     end
-   end
+  for i = 1, size do
+    print(i)
+    b[output[i]] = b[output[i]] + 1
+    local curr_class = output[i]
+    for j = 1, input:size(2) do
+      if input[i][j] == 1 then
+        break
+      end
+      F[curr_class][input[i][j]] = F[curr_class][input[i][j]] + 1 
+    end
+  end
 
-   for i = 1, nclasses do
-     b[i] = math.log(b[i]/size)
-     local s = F:sum(2)[i][1]
-     for j = 1, nfeatures do
-       W[i][j] = math.log((F[i][j] + alpha)/(s + j*alpha))
-     end
-   end
+  for i = 1, nclasses do
+    b[i] = math.log(b[i]/size)
+    local s = F:sum(2)[i][1]
+    for j = 1, nfeatures do
+      W[i][j] = math.log((F[i][j] + alpha)/(s + j*alpha))
+    end
+  end
 
-   return W, b
- end
+  return W, b
+end
 
 
 main()
