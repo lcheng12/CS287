@@ -69,16 +69,22 @@ function get_naive_bayes(input, output, alpha)
     b[output[i]] = b[output[i]] + 1
     local curr_class = output[i]
     for j = 1, input:size(2) do
+      -- This is because 1 is the padding --
       if input[i][j] == 1 then
         break
       end
+      -- i iterates across #samples, j across #featuresincluded --
       F[curr_class][input[i][j]] = F[curr_class][input[i][j]] + 1 
     end
   end
 
+  -- KW: Can we swap i, j to conform to lecture? --
   for i = 1, nclasses do
+    -- KW: this can be done outside of the loop right? --
     b[i] = math.log(b[i]/size)
+    -- Summing over all features CHECK THIS WHEN INTERNET WORKS
     local s = F:sum(2)[i][1]
+    -- Isn't it easier to just add alpha to F? --
     for j = 1, nfeatures do
       W[i][j] = math.log((F[i][j] + alpha)/(s + j*alpha))
     end
