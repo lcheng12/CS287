@@ -151,7 +151,7 @@ def main(arguments):
     dataset = args.dataset
     train, valid, test = FILE_PATHS[dataset]
 
-    ngram_limit = 2
+    ngram_limit = 1
     
     # Features are just the words.
     max_sent_len, word_to_idx = get_vocab([train, valid, test], ngram_limit=ngram_limit)
