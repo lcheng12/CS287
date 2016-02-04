@@ -17,16 +17,16 @@ function main()
    local f = hdf5.open(opt.datafile, 'r')
    nclasses = f:read('nclasses'):all():long()[1]
    nfeatures = f:read('nfeatures'):all():long()[1]
-   --valid_input = f:read('valid_input'):all()--
-   --valid_output = f:read('valid_output'):all()--
+   valid_input = f:read('valid_input'):all()
+   valid_output = f:read('valid_output'):all()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
 
-   --local W, b = get_naive_bayes(train_input, train_output, .2)--
-   print(k_fold(5, train_input, train_output))
+   local W, b = get_naive_bayes(train_input, train_output, .2)
+   --print(k_fold(5, train_input, train_output))--
 
    -- Train.
-   --print(test(W, b, valid_input, valid_output))--
+   print(test(W, b, valid_input, valid_output))
 
    -- Test.
 end
@@ -44,10 +44,12 @@ function test(W, b, input, output)
     if input[i][1] > 1 then
       truncated = input[{{i,i},{1, input[i]:gt(1):sum()}}][1]
       -- basically multiplies by feature vector --
-      temp:add(W:index(2,truncated:long()):sum(2), b)
+      print(W:index(1, truncated:long()):sum(1):view(2))
+      print(b)
+      temp:add(W:index(1,truncated:long()):sum(1):view(2), b)
       -- gets output class --
       local maxval, argmax = temp:max(1)
-      if argmax[1][1] == output[i] then
+      if argmax[1] == output[i] then
         num_correct = num_correct + 1
       end
     end
@@ -60,9 +62,9 @@ end
 function get_naive_bayes(input, output, alpha) 
   local input = input
   local output = output
-  local W = torch.DoubleTensor(nclasses, nfeatures)
+  local W = torch.DoubleTensor(nfeatures, nclasses)
   local b = torch.DoubleTensor(nclasses)
-  local F = torch.DoubleTensor(nclasses, nfeatures)
+  local F = torch.DoubleTensor(nfeatures, nclasses)
   F:zero()
   b:zero()
 
@@ -77,15 +79,15 @@ function get_naive_bayes(input, output, alpha)
       if input[i][j] == 1 then
         break
       end
-      F[curr_class][input[i][j]] = F[curr_class][input[i][j]] + 1 
+      F[input[i][j]][curr_class] = F[input[i][j]][curr_class] + 1 
     end
   end
 
   for i = 1, nclasses do
     b[i] = math.log(b[i]/size)
-    local s = F:sum(2)[i][1]
+    local s = F:sum(1)[1][i]
     for j = 1, nfeatures do
-      W[i][j] = math.log((F[i][j] + alpha)/(s + j*alpha))
+      W[j][i] = math.log((F[j][i] + alpha)/(s + j*alpha))
     end
   end
 
