@@ -8,15 +8,15 @@ import h5py
 import argparse
 import sys
 import re
+import codecs
 
 
 def line_to_words(line, dataset):
     # Different preprocessing is used for these datasets.
-    if dataset not in ['SST1', 'SST2']:
+    if dataset in ['SST1', 'SST2']:
         clean_line = clean_str_sst(line.strip())
     else:
         clean_line = clean_str(line.strip())
-    clean_line = clean_str_sst(line.strip())
     words = clean_line.split(' ')
     words = words[1:]
     return words
@@ -33,7 +33,7 @@ def get_vocab(file_list, dataset=''):
     idx = 2
     for filename in file_list:
         if filename:
-            with open(filename, "r") as f:
+            with codecs.open(filename, "r", encoding="latin-1") as f:
                 for line in f:
                     words = line_to_words(line, dataset)
                     max_sent_len = max(max_sent_len, len(words))
@@ -51,7 +51,7 @@ def convert_data(data_name, word_to_idx, max_sent_len, dataset, start_padding=0)
     """
     features = []
     lbl = []
-    with open(data_name, 'r') as f:
+    with codecs.open(data_name, 'r', encoding="latin-1") as f:
         for line in f:
             words = line_to_words(line, dataset)
             y = int(line[0]) + 1
@@ -124,7 +124,7 @@ def main(arguments):
     train, valid, test = FILE_PATHS[dataset]
 
     # Features are just the words.
-    max_sent_len, word_to_idx = get_vocab([train, valid, test])
+    max_sent_len, word_to_idx = get_vocab([train, valid, test], dataset)
 
     # Dataset name
     train_input, train_output = convert_data(train, word_to_idx, max_sent_len,
