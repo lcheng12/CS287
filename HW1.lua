@@ -88,10 +88,26 @@ function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, mini
 	 b_grad:add(b_grad, Z[i])
 end
 
+function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
+   grad:zero()
+	 local correct_class = chosen_outputs[i]
+   local _, max_class = Z[i]:max(1) 
+   if (Z[i][correct_class] - Z[i][max_class[1]] <= 1) then
+     grad[correct_class] = -1
+     grad[max_class[1]] = 1
+   end
+	 W_grad:addcmul(W_grad,
+			1 / sample_size,
+			(torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
+			(torch.expand(grad:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
+	 grad:mul(1 / sample_size)
+	 b_grad:add(b_grad, grad)
+   return W_grad, b_grad
+end
 
 function mini_batch_SGD(input, output)
 
-   local eta = 1 
+   local eta = .1 
    local lambda = 0.1
    local sample_size = 1024
    
@@ -155,9 +171,11 @@ function mini_batch_SGD(input, output)
       ys:zero()
       -- Convert back to the softmax itself
       Z:exp()
+      local grad = torch.DoubleTensor(nclasses):zero()
       
       for i = 1, sample_size do
-        LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
+        --LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
+        W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
       end
       -- Update using "weight decay"
       W:mul(1 - eta * lambda / sample_size)
