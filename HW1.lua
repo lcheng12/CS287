@@ -47,6 +47,8 @@ function test(W, b, input, output)
       -- gets features --
       truncated = input[{{i,i},{1, input[i]:gt(1):sum()}}][1]
       -- basically multiplies by feature vector --
+      print('wx', W:index(1,truncated:long()):sum(1):view(nclasses))
+      print('b', b)
       temp:add(W:index(1,truncated:long()):sum(1):view(nclasses), b)
       -- print(temp)
       -- gets output class --
@@ -74,11 +76,24 @@ function get_X_y(minibatch, input, ys, output)
    end
 end	 
 
+
+function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
+	 local correct_class = chosen_outputs[i]
+	 Z[i][correct_class] = -(1 - Z[i][correct_class])
+	 W_grad:addcmul(W_grad,
+			1 / sample_size,
+			(torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
+			(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
+	 Z[i]:mul(1 / sample_size)
+	 b_grad:add(b_grad, Z[i])
+end
+
+
 function mini_batch_SGD(input, output)
 
-   local eta = 0.01
-   local lambda = 0
-   local sample_size = 10
+   local eta = 1 
+   local lambda = 0.1
+   local sample_size = 1024
    
    local input = input
    local output = output
@@ -86,8 +101,8 @@ function mini_batch_SGD(input, output)
    local ndata = input:size(1)
    
    -- What we're trying to estimate
-   local W = torch.DoubleTensor(nfeatures, nclasses)
-   local b = torch.DoubleTensor(nclasses, 1)
+   local W = torch.DoubleTensor(nfeatures, nclasses):zero()
+   local b = torch.DoubleTensor(nclasses, 1):zero()
 
    -- We preallocate these tensors for efficiency
    local chosen_indices = torch.LongTensor(sample_size)
@@ -99,13 +114,13 @@ function mini_batch_SGD(input, output)
    local Z = torch.DoubleTensor(sample_size, nclasses)
    local Z_temp = torch.DoubleTensor(sample_size, nclasses)
 
-   local W_grad = torch.DoubleTensor(nfeatures, nclasses)
-   local b_grad = torch.DoubleTensor(nclasses, 1)
+   local W_grad = torch.DoubleTensor(nfeatures, nclasses):zero()
+   local b_grad = torch.DoubleTensor(nclasses, 1):zero()
    
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 1000 do
+   for j = 1, 50 do
       -- Randomly choose some number of samples, properly construct features matrix
       chosen_indices:random(1, ndata)
       --chosen_indices = torch.LongTensor({2, 3})
@@ -142,25 +157,8 @@ function mini_batch_SGD(input, output)
       Z:exp()
       
       for i = 1, sample_size do
-	 local correct_class = chosen_outputs[i]
-	 Z[i][correct_class] = -(1 - Z[i][correct_class])
-	 -- print("X")
-	 -- print(torch.expand(minibatch:sub(i, i), nclasses, nfeatures))
-	 -- print(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures))
-	 -- print(W_grad)
-	 -- print("Y")
-	 W_grad:addcmul(W_grad,
-			1 / sample_size,
-			(torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
-			(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
-	 Z[i]:mul(1 / sample_size)
-	 b_grad:add(b_grad, Z[i])
+        LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
       end
-
-      -- print(minibatch)
-      -- print(W_grad)
-      -- print(W_grad:sum())
-
       -- Update using "weight decay"
       W:mul(1 - eta * lambda / sample_size)
       b:mul(1 - eta * lambda / sample_size)
