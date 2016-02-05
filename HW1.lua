@@ -22,11 +22,17 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
 
-   --local W, b = mini_batch_SGD(train_input, train_output)--
-   local W, b = get_naive_bayes(train_input, train_output, .2)
+   nclasses = 3
+   nfeatures = 5
+   dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{1,3,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
+   dummy_output = torch.IntTensor({1,2,3,1,2})
+
+   local W, b = mini_batch_SGD(dummy_input, dummy_output)
+   -- local W, b = mini_batch_SGD(train_input, train_output)
+   -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
    -- Train.
-   print(test(W, b, valid_input, valid_output))
+   -- print(test(W, b, valid_input, valid_output))
 
    -- Test.
 end
@@ -44,12 +50,13 @@ function test(W, b, input, output)
       temp:add(W:index(1,truncated:long()):sum(1):view(nclasses), b)
       -- gets output class --
       local maxval, argmax = temp:max(1)
+      -- print(argmax[1])
       if argmax[1] == output[i] then
 	 num_correct = num_correct + 1
       end
    end
-   print(size)
-   print(num_correct)
+   -- print(size)
+   -- print(num_correct)
    return num_correct/size
 end
 
@@ -59,18 +66,17 @@ function get_X_y(minibatch, input, ys, output)
    for i = 1, ndata do
       ys[i][output[i]] = 1
       for j = 1, input:size(2) do
-	 if input[i][j] == 1 then
-	    break
+	 if input[i][j] ~= 1 then
+	    minibatch[i][input[i][j]] = 1
 	 end
-	 minibatch[i][input[i][j]] = 1
       end
    end
 end	 
 
 function mini_batch_SGD(input, output)
 
-   local eta = 0.5
-   local lambda = 0.5
+   local eta = 2
+   local lambda = 0.1
    
    local input = input
    local output = output
@@ -78,10 +84,17 @@ function mini_batch_SGD(input, output)
    local ndata = input:size(1)
    
    -- What we're trying to estimate
-   local W = torch.DoubleTensor(nfeatures, nclasses)
-   local b = torch.DoubleTensor(nclasses, 1)
+   i = 0
+   local W = torch.DoubleTensor(nfeatures, nclasses):apply(function(x)
+	 i = i + 1
+	 return i
+							  end)
+   local b = torch.DoubleTensor(nclasses, 1):apply(function(x)
+	 i = i + 1
+	 return i
+							    end)
    
-   local sample_size = 10
+   local sample_size = 2
 
    -- We preallocate these tensors for efficiency
    local chosen_indices = torch.LongTensor(sample_size)
@@ -90,6 +103,7 @@ function mini_batch_SGD(input, output)
    local minibatch = torch.DoubleTensor(sample_size, nfeatures)
    local ys = torch.ByteTensor(sample_size, nclasses)
 
+   i = 0
    local Z = torch.DoubleTensor(sample_size, nclasses)
    local Z_temp = torch.DoubleTensor(sample_size, nclasses)
 
@@ -99,11 +113,16 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 10 do
+   for j = 1, 1 do
       -- Randomly choose some number of samples, properly construct features matrix
       chosen_indices:random(1, ndata)
+      chosen_indices = torch.LongTensor({1, 2})
+      -- print("chosen indices")
+      -- print(chosen_indices)
       chosen_inputs:index(input, 1, chosen_indices)
       chosen_outputs:index(output, 1, chosen_indices)
+      -- print(chosen_outputs)
+      -- print(chosen_inputs)
 
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
@@ -124,18 +143,27 @@ function mini_batch_SGD(input, output)
 
       -- Convert back to the softmax itself
       Z:exp()
+      print(Z)
       
       -- local losses = Z[ys]    
       for i = 1, sample_size do
 	 local correct_class = chosen_outputs[i]
-	 Z[i][correct_class] = -1 - Z[i][correct_class]
-	 Z[i]:mul(eta)
+	 Z[i][correct_class] = -(1 - Z[i][correct_class])
+	 print("X")
+	 print(torch.expand(minibatch:sub(i, i), nclasses, nfeatures))
+	 print(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures))
+	 print(W_grad)
+	 print("Y")
 	 W_grad:addcmul(W_grad,
 			1 / sample_size,
-			torch.expand(minibatch:sub(i, i), nclasses, nfeatures),
-			torch.expand(b_grad:view(nclasses, 1), nclasses, nfeatures))
+			(torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
+			(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
+	 Z[i]:mul(1 / sample_size)
 	 b_grad:add(b_grad, Z[i])
       end
+
+      print(minibatch)
+      print(W_grad)
 
       -- Update using "weight decay"
       W:mul(1 - eta * lambda / sample_size)
@@ -177,11 +205,9 @@ function get_naive_bayes(input, output, alpha)
       end
    end
 
-   -- KW: Can we swap i, j to conform to lecture? --
    for i = 1, nclasses do
       -- KW: this can be done outside of the loop right? --
       b[i] = math.log(b[i]/size)
-      -- Summing over all features CHECK THIS WHEN INTERNET WORKS
       local s = F:sum(1)[1][i]
       -- Isn't it easier to just add alpha to F? --
       for j = 1, nfeatures do
