@@ -78,7 +78,7 @@ function mini_batch_SGD(input, output)
 
    local eta = 0.01
    local lambda = 0
-   local sample_size = 10
+   local sample_size = 100
    
    local input = input
    local output = output
@@ -108,7 +108,6 @@ function mini_batch_SGD(input, output)
    for j = 1, 1000 do
       -- Randomly choose some number of samples, properly construct features matrix
       chosen_indices:random(1, ndata)
-      --chosen_indices = torch.LongTensor({2, 3})
       -- print("chosen indices")
       -- print(chosen_indices)
       chosen_inputs:index(input, 1, chosen_indices)
