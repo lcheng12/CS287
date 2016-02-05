@@ -22,12 +22,12 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
 
-   nclasses = 3
-   nfeatures = 5
-   dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{1,3,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
-   dummy_output = torch.IntTensor({1,2,3,1,2})
+   --nclasses = 3
+   --nfeatures = 5
+   --dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{1,3,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
+   --dummy_output = torch.IntTensor({1,2,3,1,2})
 
-   local W, b = mini_batch_SGD(dummy_input, dummy_output)
+   local W, b = mini_batch_SGD(train_input, train_output)
    -- local W, b = mini_batch_SGD(train_input, train_output)
    -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
@@ -76,9 +76,9 @@ end
 
 function mini_batch_SGD(input, output)
 
-   local eta = 1
+   local eta = 0.01
    local lambda = 0
-   local sample_size = 2
+   local sample_size = 10
    
    local input = input
    local output = output
@@ -108,7 +108,7 @@ function mini_batch_SGD(input, output)
    for j = 1, 1000 do
       -- Randomly choose some number of samples, properly construct features matrix
       chosen_indices:random(1, ndata)
-      chosen_indices = torch.LongTensor({2, 3})
+      --chosen_indices = torch.LongTensor({2, 3})
       -- print("chosen indices")
       -- print(chosen_indices)
       chosen_inputs:index(input, 1, chosen_indices)
@@ -121,41 +121,25 @@ function mini_batch_SGD(input, output)
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
 
-      print("X")
-      print(minibatch)
-      print("W")
-      print(W)
-      print("b")
-      print(b)
       -- Compute Z = XW + b
       Z:addmm(torch.expand(b, nclasses, sample_size):transpose(1,2), minibatch, W)
       Z_temp:copy(Z)
 
-      print("Z")
-      print(Z)
-      print("Z_temp")
-      print(Z_temp)
       -- Compute the log of the softmax of Z
       -- Subtract the max from each element, take the exponent, sum, take the log, then add back M
       max:max(Z, 2)
-      print("max")
-      print(max)
-      print(torch.expand(max, sample_size, nclasses))
-      Z_temp:csub(torch.expand(max, sample_size, nclasses):transpose(1,2))
-      print("subtracted")
-      print(Z_temp)
+      Z_temp:csub(torch.expand(max, sample_size, nclasses))
       Z_temp:exp()
       summed:sum(Z_temp, 2)
       summed:log()
       summed:add(max)
-      Z:csub(Z_temp:expand(summed, sample_size, nclasses))
+      Z:csub(torch.expand(summed, sample_size, nclasses))
 
       local losses = Z[ys]
       print(-losses:sum())
       ys:zero()
       -- Convert back to the softmax itself
       Z:exp()
-      print(Z)
       
       for i = 1, sample_size do
 	 local correct_class = chosen_outputs[i]
