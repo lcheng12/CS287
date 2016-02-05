@@ -32,7 +32,7 @@ function main()
    -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
    -- Train.
-   -- print(test(W, b, valid_input, valid_output))
+   print(test(W, b, valid_input, valid_output))
 
    -- Test.
 end
@@ -48,6 +48,7 @@ function test(W, b, input, output)
       truncated = input[{{i,i},{1, input[i]:gt(1):sum()}}][1]
       -- basically multiplies by feature vector --
       temp:add(W:index(1,truncated:long()):sum(1):view(nclasses), b)
+      -- print(temp)
       -- gets output class --
       local maxval, argmax = temp:max(1)
       -- print(argmax[1])
@@ -75,8 +76,9 @@ end
 
 function mini_batch_SGD(input, output)
 
-   local eta = 2
-   local lambda = 0.1
+   local eta = 1
+   local lambda = 0
+   local sample_size = 2
    
    local input = input
    local output = output
@@ -84,17 +86,8 @@ function mini_batch_SGD(input, output)
    local ndata = input:size(1)
    
    -- What we're trying to estimate
-   i = 0
-   local W = torch.DoubleTensor(nfeatures, nclasses):apply(function(x)
-	 i = i + 1
-	 return i
-							  end)
-   local b = torch.DoubleTensor(nclasses, 1):apply(function(x)
-	 i = i + 1
-	 return i
-							    end)
-   
-   local sample_size = 2
+   local W = torch.DoubleTensor(nfeatures, nclasses)
+   local b = torch.DoubleTensor(nclasses, 1)
 
    -- We preallocate these tensors for efficiency
    local chosen_indices = torch.LongTensor(sample_size)
@@ -103,7 +96,6 @@ function mini_batch_SGD(input, output)
    local minibatch = torch.DoubleTensor(sample_size, nfeatures)
    local ys = torch.ByteTensor(sample_size, nclasses)
 
-   i = 0
    local Z = torch.DoubleTensor(sample_size, nclasses)
    local Z_temp = torch.DoubleTensor(sample_size, nclasses)
 
@@ -113,10 +105,10 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 1 do
+   for j = 1, 1000 do
       -- Randomly choose some number of samples, properly construct features matrix
       chosen_indices:random(1, ndata)
-      chosen_indices = torch.LongTensor({1, 2})
+      chosen_indices = torch.LongTensor({2, 3})
       -- print("chosen indices")
       -- print(chosen_indices)
       chosen_inputs:index(input, 1, chosen_indices)
@@ -124,36 +116,55 @@ function mini_batch_SGD(input, output)
       -- print(chosen_outputs)
       -- print(chosen_inputs)
 
+      -- print(chosen_inputs)
+      -- print(minibatch)
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
 
+      print("X")
+      print(minibatch)
+      print("W")
+      print(W)
+      print("b")
+      print(b)
       -- Compute Z = XW + b
       Z:addmm(torch.expand(b, nclasses, sample_size):transpose(1,2), minibatch, W)
       Z_temp:copy(Z)
 
+      print("Z")
+      print(Z)
+      print("Z_temp")
+      print(Z_temp)
       -- Compute the log of the softmax of Z
       -- Subtract the max from each element, take the exponent, sum, take the log, then add back M
       max:max(Z, 2)
-      Z_temp:csub(torch.expand(max, sample_size, nclasses))
+      print("max")
+      print(max)
+      print(torch.expand(max, sample_size, nclasses))
+      Z_temp:csub(torch.expand(max, sample_size, nclasses):transpose(1,2))
+      print("subtracted")
+      print(Z_temp)
       Z_temp:exp()
       summed:sum(Z_temp, 2)
       summed:log()
       summed:add(max)
       Z:csub(Z_temp:expand(summed, sample_size, nclasses))
 
+      local losses = Z[ys]
+      print(-losses:sum())
+      ys:zero()
       -- Convert back to the softmax itself
       Z:exp()
       print(Z)
       
-      -- local losses = Z[ys]    
       for i = 1, sample_size do
 	 local correct_class = chosen_outputs[i]
 	 Z[i][correct_class] = -(1 - Z[i][correct_class])
-	 print("X")
-	 print(torch.expand(minibatch:sub(i, i), nclasses, nfeatures))
-	 print(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures))
-	 print(W_grad)
-	 print("Y")
+	 -- print("X")
+	 -- print(torch.expand(minibatch:sub(i, i), nclasses, nfeatures))
+	 -- print(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures))
+	 -- print(W_grad)
+	 -- print("Y")
 	 W_grad:addcmul(W_grad,
 			1 / sample_size,
 			(torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
@@ -162,8 +173,9 @@ function mini_batch_SGD(input, output)
 	 b_grad:add(b_grad, Z[i])
       end
 
-      print(minibatch)
-      print(W_grad)
+      -- print(minibatch)
+      -- print(W_grad)
+      -- print(W_grad:sum())
 
       -- Update using "weight decay"
       W:mul(1 - eta * lambda / sample_size)
@@ -175,7 +187,10 @@ function mini_batch_SGD(input, output)
 
       W_grad:zero()
       b_grad:zero()
+      Z:zero()
+      Z_temp:zero()
    end
+   -- print(W)
    return W, b
 end  
 
