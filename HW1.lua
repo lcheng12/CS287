@@ -59,8 +59,7 @@ function test(W, b, input, output)
 	 num_correct = num_correct + 1
       end
    end
-   -- print(size)
-   -- print(num_correct)
+   -- print(size, num_correct)
    return num_correct/size
 end
 
@@ -79,35 +78,35 @@ end
 
 
 function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
-	 local correct_class = chosen_outputs[i]
-	 Z[i][correct_class] = -(1 - Z[i][correct_class])
-	 W_grad:addcmul(W_grad,
-			1 / sample_size,
-			(torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
-			(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
-	 Z[i]:mul(1 / sample_size)
-	 b_grad:add(b_grad, Z[i])
+   local correct_class = chosen_outputs[i]
+   Z[i][correct_class] = -(1 - Z[i][correct_class])
+   W_grad:addcmul(W_grad,
+		  1 / sample_size,
+		  (torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
+		  (torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
+   Z[i]:mul(1 / sample_size)
+   b_grad:add(b_grad, Z[i])
 end
 
 function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
    grad:zero()
-	 local correct_class = chosen_outputs[i]
+   local correct_class = chosen_outputs[i]
    local _, max_class = Z[i]:max(1) 
    if (Z[i][correct_class] - Z[i][max_class[1]] <= 1) then
-     grad[correct_class] = -1
-     grad[max_class[1]] = 1
+      grad[correct_class] = -1
+      grad[max_class[1]] = 1
    end
-	 W_grad:addcmul(W_grad,
-			1 / sample_size,
-			(torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
-			(torch.expand(grad:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
-	 grad:mul(1 / sample_size)
-	 b_grad:add(b_grad, grad)
+   W_grad:addcmul(W_grad,
+		  1 / sample_size,
+		  (torch.expand(minibatch:sub(i, i), nclasses, nfeatures)):transpose(1,2),
+		  (torch.expand(grad:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
+   grad:mul(1 / sample_size)
+   b_grad:add(b_grad, grad)
    return W_grad, b_grad
 end
 
 function mini_batch_SGD(input, output)
-
+   
    local eta = 1 
    local lambda = 0.1
    local sample_size = 5 
