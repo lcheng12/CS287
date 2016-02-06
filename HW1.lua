@@ -27,8 +27,8 @@ function main()
    dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{3,1,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
    dummy_output = torch.IntTensor({1,2,3,1,2})
 
-   local W, b = mini_batch_SGD(train_input, train_output)
-   -- local W, b = mini_batch_SGD(dummy_input, dummy_output)
+   --local W, b = mini_batch_SGD(train_input, train_output)
+   local W, b = mini_batch_SGD(dummy_input, dummy_output)
    -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
    -- Train.
@@ -110,7 +110,7 @@ function mini_batch_SGD(input, output)
 
    local eta = 1 
    local lambda = 0.1
-   local sample_size = 1000 
+   local sample_size = 5 
    
    local input = input
    local output = output
@@ -142,10 +142,10 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 100 do
+   for j = 1, 1 do
       -- Randomly choose some number of samples, properly construct features matrix
       chosen_indices:random(1, ndata)
-      --chosen_indices = torch.LongTensor({1,2,3,4,5})
+      chosen_indices = torch.LongTensor({1,2,3,4,5})
       -- print("chosen indices")
       local left = ((j - 1) * sample_size + 1) % ndata
       --local chosen_inputs = input:narrow(1, left, sample_size)
