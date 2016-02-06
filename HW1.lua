@@ -118,6 +118,7 @@ function mini_batch_SGD(input, output)
    local shuffle = torch.LongTensor(ndata)
    shuffle:randperm(ndata)
 
+   print(shuffle)
    local shuffled_output = output:index(1, shuffle)
    local shuffled_input = input:index(1, shuffle)
    
