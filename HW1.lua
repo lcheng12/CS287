@@ -22,17 +22,18 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
 
-   --nclasses = 3
-   --nfeatures = 5
-   --dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{1,3,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
-   --dummy_output = torch.IntTensor({1,2,3,1,2})
+   nclasses = 3
+   nfeatures = 5
+   dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{3,1,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
+   dummy_output = torch.IntTensor({1,2,3,1,2})
 
-   local W, b = mini_batch_SGD(train_input, train_output)
    -- local W, b = mini_batch_SGD(train_input, train_output)
+   local W, b = mini_batch_SGD(dummy_input, dummy_output)
    -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
    -- Train.
-   print(test(W, b, valid_input, valid_output))
+   print(test(W, b, dummy_input, dummy_output))
+   --print(test(W, b, valid_input, valid_output))
 
    -- Test.
 end
@@ -47,8 +48,8 @@ function test(W, b, input, output)
       -- gets features --
       truncated = input[{{i,i},{1, input[i]:gt(1):sum()}}][1]
       -- basically multiplies by feature vector --
-      print('wx', W:index(1,truncated:long()):sum(1):view(nclasses))
-      print('b', b)
+      --print('wx', W:index(1,truncated:long()):sum(1):view(nclasses))
+      --print('b', b)
       temp:add(W:index(1,truncated:long()):sum(1):view(nclasses), b)
       -- print(temp)
       -- gets output class --
@@ -86,6 +87,8 @@ function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, mini
 			(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
 	 Z[i]:mul(1 / sample_size)
 	 b_grad:add(b_grad, Z[i])
+   print(Z[i])
+   print(b_grad)
 end
 
 function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
@@ -109,7 +112,7 @@ function mini_batch_SGD(input, output)
 
    local eta = .1 
    local lambda = 0.1
-   local sample_size = 1024
+   local sample_size = 5 
    
    local input = input
    local output = output
@@ -127,8 +130,8 @@ function mini_batch_SGD(input, output)
 
    -- We preallocate these tensors for efficiency
    local chosen_indices = torch.LongTensor(sample_size)
-   -- local chosen_inputs = torch.IntTensor(sample_size, input:size(2))
-   -- local chosen_outputs = torch.IntTensor(sample_size)
+   local chosen_inputs = torch.IntTensor(sample_size, input:size(2))
+   local chosen_outputs = torch.IntTensor(sample_size)
    local minibatch = torch.DoubleTensor(sample_size, nfeatures)
    local ys = torch.ByteTensor(sample_size, nclasses)
 
@@ -141,22 +144,20 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 100 do
+   for j = 1, 1 do
       -- Randomly choose some number of samples, properly construct features matrix
-      -- chosen_indices:random(1, ndata)
+      chosen_indices:random(1, ndata)
+      chosen_indices = torch.LongTensor({1,2,3,4,5})
       -- print("chosen indices")
-      -- print(chosen_indices)
+      print(chosen_indices)
       local left = ((j - 1) * sample_size + 1) % ndata
-      local chosen_inputs = input:narrow(1, left, sample_size)
-      local chosen_outputs = output:narrow(1, left, sample_size)
-
-      -- chosen_inputs:index(input, 1, chosen_indices)
-      -- chosen_outputs:index(output, 1, chosen_indices)
+      --local chosen_inputs = input:narrow(1, left, sample_size)
+      --local chosen_outputs = output:narrow(1, left, sample_size)
+      chosen_inputs:index(input, 1, chosen_indices)
+      chosen_outputs:index(output, 1, chosen_indices)
       -- print(chosen_outputs)
       -- print(chosen_inputs)
 
-      -- print(chosen_inputs)
-      -- print(minibatch)
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
 
@@ -186,23 +187,28 @@ function mini_batch_SGD(input, output)
       Z:exp()
       local grad = torch.DoubleTensor(nclasses):zero()
       
+      print(Z)
       for i = 1, sample_size do
-        --LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
-        W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
+        LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
+        --W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
       end
       -- Update using "weight decay"
       W:mul(1 - eta * lambda / sample_size)
       b:mul(1 - eta * lambda / sample_size)
       b_grad:mul(eta)
       W_grad:mul(eta)
+      print('b_grad',b_grad)
       W:csub(W_grad)
       b:csub(b_grad)
+      print('b',b)
 
       W_grad:zero()
       b_grad:zero()
       Z:zero()
       Z_temp:zero()
    end
+   print('W',W)
+   print('b',b)
    -- print(W)
    return W, b
 end  
