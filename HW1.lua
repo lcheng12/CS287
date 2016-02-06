@@ -22,8 +22,8 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
 
-   --nclasses = 3
-   --nfeatures = 5
+   nclasses = 3
+   nfeatures = 5
    dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{3,1,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
    dummy_output = torch.IntTensor({1,2,3,1,2})
 
