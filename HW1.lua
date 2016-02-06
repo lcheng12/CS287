@@ -76,14 +76,19 @@ end
 
 function mini_batch_SGD(input, output)
 
-   local eta = 0.01
-   local lambda = 0
+   local eta = 0.1
+   local lambda = 1
    local sample_size = 100
    
    local input = input
    local output = output
 
    local ndata = input:size(1)
+   local shuffle = torch.LongTensor(ndata)
+   shuffle:randperm(ndata)
+
+   output:index(output, 1, shuffle)
+   input:index(input, 1, shuffle)
    
    -- What we're trying to estimate
    local W = torch.DoubleTensor(nfeatures, nclasses)
@@ -91,8 +96,8 @@ function mini_batch_SGD(input, output)
 
    -- We preallocate these tensors for efficiency
    local chosen_indices = torch.LongTensor(sample_size)
-   local chosen_inputs = torch.IntTensor(sample_size, input:size(2))
-   local chosen_outputs = torch.IntTensor(sample_size)
+   -- local chosen_inputs = torch.IntTensor(sample_size, input:size(2))
+   -- local chosen_outputs = torch.IntTensor(sample_size)
    local minibatch = torch.DoubleTensor(sample_size, nfeatures)
    local ys = torch.ByteTensor(sample_size, nclasses)
 
@@ -105,13 +110,17 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 1000 do
+   for j = 1, 100 do
       -- Randomly choose some number of samples, properly construct features matrix
-      chosen_indices:random(1, ndata)
+      -- chosen_indices:random(1, ndata)
       -- print("chosen indices")
       -- print(chosen_indices)
-      chosen_inputs:index(input, 1, chosen_indices)
-      chosen_outputs:index(output, 1, chosen_indices)
+      local left = ((j - 1) * sample_size + 1) % ndata
+      local chosen_inputs = input:narrow(1, left, sample_size)
+      local chosen_outputs = output:narrow(1, left, sample_size)
+
+      -- chosen_inputs:index(input, 1, chosen_indices)
+      -- chosen_outputs:index(output, 1, chosen_indices)
       -- print(chosen_outputs)
       -- print(chosen_inputs)
 
@@ -120,6 +129,11 @@ function mini_batch_SGD(input, output)
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
 
+
+      for i = 1, sample_size do
+	 
+      end
+	 
       -- Compute Z = XW + b
       Z:addmm(torch.expand(b, nclasses, sample_size):transpose(1,2), minibatch, W)
       Z_temp:copy(Z)
