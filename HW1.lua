@@ -22,13 +22,13 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
 
-   nclasses = 3
-   nfeatures = 5
+   --nclasses = 3
+   --nfeatures = 5
    dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{3,1,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
    dummy_output = torch.IntTensor({1,2,3,1,2})
 
-   -- local W, b = mini_batch_SGD(train_input, train_output)
-   local W, b = mini_batch_SGD(dummy_input, dummy_output)
+   local W, b = mini_batch_SGD(train_input, train_output)
+   -- local W, b = mini_batch_SGD(dummy_input, dummy_output)
    -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
    -- Train.
@@ -87,8 +87,6 @@ function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, mini
 			(torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
 	 Z[i]:mul(1 / sample_size)
 	 b_grad:add(b_grad, Z[i])
-   print(Z[i])
-   print(b_grad)
 end
 
 function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
@@ -110,9 +108,9 @@ end
 
 function mini_batch_SGD(input, output)
 
-   local eta = .1 
+   local eta = 1 
    local lambda = 0.1
-   local sample_size = 5 
+   local sample_size = 1000 
    
    local input = input
    local output = output
@@ -121,8 +119,8 @@ function mini_batch_SGD(input, output)
    local shuffle = torch.LongTensor(ndata)
    shuffle:randperm(ndata)
 
-   output:index(output, 1, shuffle)
-   input:index(input, 1, shuffle)
+   local shuffled_output = output:index(1, shuffle)
+   local shuffled_input = input:index(1, shuffle)
    
    -- What we're trying to estimate
    local W = torch.DoubleTensor(nfeatures, nclasses):zero()
@@ -144,19 +142,16 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 1 do
+   for j = 1, 100 do
       -- Randomly choose some number of samples, properly construct features matrix
       chosen_indices:random(1, ndata)
-      chosen_indices = torch.LongTensor({1,2,3,4,5})
+      --chosen_indices = torch.LongTensor({1,2,3,4,5})
       -- print("chosen indices")
-      print(chosen_indices)
       local left = ((j - 1) * sample_size + 1) % ndata
       --local chosen_inputs = input:narrow(1, left, sample_size)
-      --local chosen_outputs = output:narrow(1, left, sample_size)
-      chosen_inputs:index(input, 1, chosen_indices)
-      chosen_outputs:index(output, 1, chosen_indices)
-      -- print(chosen_outputs)
-      -- print(chosen_inputs)
+      --local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
+      chosen_inputs = input:index(1, chosen_indices)
+      chosen_outputs = shuffled_output:index(1, chosen_indices)
 
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
@@ -187,7 +182,6 @@ function mini_batch_SGD(input, output)
       Z:exp()
       local grad = torch.DoubleTensor(nclasses):zero()
       
-      print(Z)
       for i = 1, sample_size do
         LR_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch)
         --W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, Z_temp, sample_size, minibatch, grad)
@@ -197,10 +191,8 @@ function mini_batch_SGD(input, output)
       b:mul(1 - eta * lambda / sample_size)
       b_grad:mul(eta)
       W_grad:mul(eta)
-      print('b_grad',b_grad)
       W:csub(W_grad)
       b:csub(b_grad)
-      print('b',b)
 
       W_grad:zero()
       b_grad:zero()
