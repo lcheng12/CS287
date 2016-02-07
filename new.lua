@@ -32,7 +32,6 @@ function main()
    -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
    -- Train.
-   -- print("XX")
    --print(test(W, b, dummy_input, dummy_output))
    print(test(W, b, valid_input, valid_output))
 
@@ -80,22 +79,14 @@ end
 
 function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch)
    local correct_class = chosen_outputs[i]
-   --print("y", correct_class)
-   -- print("i", i)
-   -- print("old_grad", W_grad)
-   -- print("old_grad", b_grad)
    Z[i][correct_class] = -(1 - Z[i][correct_class])
    
    W_grad:addcmul(W_grad,
 		  1 / sample_size,
 		  torch.expand(minibatch:sub(i, i), nclasses, nfeatures):transpose(1,2),
 		  torch.expand(Z[i]:view(nclasses, 1), nclasses, nfeatures):transpose(1,2))
-   --print("x", W_grad:sum())
    Z[i]:mul(1 / sample_size)
    b_grad:add(b_grad, Z[i])
-   -- print("new_grad", W_grad)
-   -- print("new_grad", b_grad)
-   return a
 end
 
 function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
@@ -164,10 +155,6 @@ function mini_batch_SGD(input, output)
    local W = torch.DoubleTensor(nfeatures, nclasses):zero()
    local b = torch.DoubleTensor(nclasses, 1):zero()
 
-   local W_finite = torch.DoubleTensor(nfeatures, nclasses):zero()
-   local b_finite = torch.DoubleTensor(nclasses, 1):zero()
-
-
    -- We preallocate these tensors for efficiency
    local chosen_inputs = torch.IntTensor(sample_size, input:size(2))
    local chosen_outputs = torch.IntTensor(sample_size)
@@ -177,9 +164,6 @@ function mini_batch_SGD(input, output)
    local Z = torch.DoubleTensor(sample_size, nclasses)
    local softmax = torch.DoubleTensor(sample_size, nclasses)
    local Z_temp = torch.DoubleTensor(sample_size, nclasses)
-
-   local Z_finite = torch.DoubleTensor(sample_size, nclasses)
-   local Z_temp_finite = torch.DoubleTensor(sample_size, nclasses)
 
    local W_grad = torch.DoubleTensor(nfeatures, nclasses):zero()
    local b_grad = torch.DoubleTensor(nclasses, 1):zero()
@@ -192,43 +176,23 @@ function mini_batch_SGD(input, output)
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
 
-
-
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
 
-
-      
-      local diff = 0.01
-
-      --[[
-      W_finite:copy(W)
-      b_finite:copy(b)
-      W_finite[2][4] = W_finite[2][4] + diff
-      --]]
-      -- b_finite[5] = b_finite[5] + diff
-
-
       compute_ys(Z, minibatch, W, b, summed, max)
       compute_softmax(softmax, Z, Z_temp, minibatch, W, b, summed, max)
-      -- compute_softmax(Z_finite, Z_temp_finite, minibatch, W_finite, b_finite, summed, max)
       local losses = softmax[ys]
-      --local loss_diff = softmax[ys] - Z_finite[ys]
-
 
       print(-losses:sum())
-      --print(-loss_diff:sum())
       ys:zero()
+
       -- Convert back to the softmax itself
       Z:exp()
 
-      
       local grad = torch.DoubleTensor(nclasses):zero()
       
       for i = 1, sample_size do
-	 -- a = LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
-	 --print(a[2][4], loss_diff[i] / diff)
-	 -- print(torch.gt(W_grad, 0))
+	 -- LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
         hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
       end
 
@@ -236,17 +200,11 @@ function mini_batch_SGD(input, output)
       W:mul(1 - eta * lambda / sample_size)
       b:mul(1 - eta * lambda / sample_size)
 
-
       b_grad:mul(eta)
       W_grad:mul(eta)
 
-
       W:csub(W_grad)
       b:csub(b_grad)
-
-
-
-
 
       W_grad:zero()
       b_grad:zero()
@@ -254,9 +212,7 @@ function mini_batch_SGD(input, output)
       Z_temp:zero()
       minibatch:zero()
    end
-   --print('W',W)
-   -- print('b',b)
-   -- print(W)
+
    return W, b
 end  
 
@@ -333,7 +289,5 @@ function k_fold(k, training_in, training_out)
   print(total)
   return correct/total
 end
-
-
 
 main()
