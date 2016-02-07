@@ -21,29 +21,40 @@ function main()
    valid_output = f:read('valid_output'):all()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
+   test_input = f:read('test_input'):all()
 
 --   nclasses = 3
 --   nfeatures = 5
    dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{3,1,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
    dummy_output = torch.IntTensor({1,2,3,1,2})
 
-   local W, b = mini_batch_SGD(train_input, train_output)
+   -- local W, b = mini_batch_SGD(train_input, train_output)
    -- local W, b = mini_batch_SGD(dummy_input, dummy_output)
-   -- local W, b = get_naive_bayes(train_input, train_output, .2)
+   local W, b = get_naive_bayes(train_input, train_output, 1)
 
    -- Train.
    --print(test(W, b, dummy_input, dummy_output))
    print(test(W, b, valid_input, valid_output))
-
+   do_kaggle(W, b, test_input)
    -- Test.
 end
 
-function test(W, b, input, output)
+function do_kaggle(W, b, input)
+   local predictions = make_predictions(W, b, input)
+   local outf = io.open("kaggle predictions" .. os.date("%X"), "w")
+   outf:write("ID,Category\n")
+   for i = 1, input:size(1) do
+      outf:write(string.format("%d,%d\n", i, predictions[i]))
+   end
+end   
+
+function make_predictions(W, b, input)
    local input = input
-   local output = output
-   local size = output:size(1)
+   local size = input:size(1)
+   print(size)
+   print(input:size())
+   local output = torch.Tensor(size)
    local temp = torch.DoubleTensor(#input[1])
-   local num_correct = 0
    for i = 1, size do
       -- gets features --
       truncated = input[{{i,i},{1, input[i]:gt(1):sum()}}][1]
@@ -54,8 +65,17 @@ function test(W, b, input, output)
       -- print(temp)
       -- gets output class --
       local maxval, argmax = temp:max(1)
-      -- print(argmax[1])
-      if argmax[1] == output[i] then
+      output[i] = argmax[1]
+   end
+   return output
+end
+   
+function test(W, b, input, output)
+   local predictions = make_predictions(W, b, input)
+   local size = output:size(1)
+   local num_correct = 0
+   for i = 1, size do
+      if predictions[i] == output[i] then
 	 num_correct = num_correct + 1
       end
    end
@@ -129,13 +149,12 @@ function compute_ys(Z, minibatch, W, b, summed, max)
 end
 
 function mini_batch_SGD(input, output)
-   
    --local eta = 1 
    --local lambda = 1 
    --sample_size = 512 
    local eta = .1 
    local lambda = 1 
-   sample_size = 512 
+   sample_size = 100
    
    local input = input
    local output = output
@@ -147,9 +166,6 @@ function mini_batch_SGD(input, output)
 
    local shuffled_output = output:index(1, shuffle)
    local shuffled_input = input:index(1, shuffle)
-
-
-
 
    -- What we're trying to estimate
    local W = torch.DoubleTensor(nfeatures, nclasses):zero()
@@ -171,8 +187,8 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 200 do
-      local left = ((j - 1) * sample_size + 1) % ndata + 1
+   for j = 1, 2 do
+      local left = ((j - 1) * sample_size + 1) % (ndata - sample_size) + 1
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
 
@@ -229,7 +245,6 @@ function get_naive_bayes(input, output, alpha)
 
    -- computes F --
    for i = 1, size do
-      print(i)
       b[output[i]] = b[output[i]] + 1
       local curr_class = output[i]
       for j = 1, input:size(2) do
