@@ -22,17 +22,17 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
 
-   nclasses = 3
-   nfeatures = 5
+--   nclasses = 3
+--   nfeatures = 5
    dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{3,1,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
    dummy_output = torch.IntTensor({1,2,3,1,2})
 
-   -- local W, b = mini_batch_SGD(train_input, train_output)
-   local W, b = mini_batch_SGD(dummy_input, dummy_output)
+   local W, b = mini_batch_SGD(train_input, train_output)
+   -- local W, b = mini_batch_SGD(dummy_input, dummy_output)
    -- local W, b = get_naive_bayes(train_input, train_output, .2)
 
    -- Train.
-   print("XX")
+   -- print("XX")
    print(test(W, b, dummy_input, dummy_output))
    --print(test(W, b, valid_input, valid_output))
 
@@ -81,9 +81,9 @@ end
 function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch)
    local correct_class = chosen_outputs[i]
    --print("y", correct_class)
-   print("i", i)
-   print("old_grad", W_grad)
-   print("old_grad", b_grad)
+   -- print("i", i)
+   -- print("old_grad", W_grad)
+   -- print("old_grad", b_grad)
    Z[i][correct_class] = -(1 - Z[i][correct_class])
    
    W_grad:addcmul(W_grad,
@@ -93,8 +93,8 @@ function LR_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch)
    --print("x", W_grad:sum())
    Z[i]:mul(1 / sample_size)
    b_grad:add(b_grad, Z[i])
-   print("new_grad", W_grad)
-   print("new_grad", b_grad)
+   -- print("new_grad", W_grad)
+   -- print("new_grad", b_grad)
    return a
 end
 
@@ -118,7 +118,7 @@ end
 function compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
    -- Compute Z = XW + b
    Z:addmm(torch.expand(b, nclasses, sample_size):transpose(1,2), minibatch, W)
-   print("multiplication result", Z)
+
    Z_temp:copy(Z)
    
    -- Compute the log of the softmax of Z
@@ -135,8 +135,8 @@ end
 function mini_batch_SGD(input, output)
    
    local eta = 0.1
-   local lambda = 200
-   sample_size = 2
+   local lambda = 2
+   sample_size = 100
    
    local input = input
    local output = output
@@ -149,9 +149,9 @@ function mini_batch_SGD(input, output)
    local shuffled_output = output:index(1, shuffle)
    local shuffled_input = input:index(1, shuffle)
 
-   print("shuffle", shuffle)
-   print("shuffled_output", shuffled_output)
-   print("shuffled_input", shuffled_input)
+
+
+
    -- What we're trying to estimate
    local W = torch.DoubleTensor(nfeatures, nclasses):zero()
    local b = torch.DoubleTensor(nclasses, 1):zero()
@@ -178,17 +178,17 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 2 do
-      local left = ((j - 1) * sample_size + 1) % ndata
+   for j = 1, 2000 do
+      local left = ((j - 1) * sample_size + 1) % ndata + 1
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
-      print("chosen_inputs", chosen_inputs)
-      print("chosen_outputs", chosen_outputs)
+
+
 
       -- Get the proper input matrix and one-hot-encoded output
       get_X_y(minibatch, chosen_inputs, ys, chosen_outputs)
-      print("minibatch", minibatch)
-      print("ys", ys)
+
+
       
       local diff = 0.01
 
@@ -198,20 +198,20 @@ function mini_batch_SGD(input, output)
       W_finite[2][4] = W_finite[2][4] + diff
       --]]
       -- b_finite[5] = b_finite[5] + diff
-      print("initial_W", W)
-      print("initial_b", b)
+
+
       compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
       -- compute_softmax(Z_finite, Z_temp_finite, minibatch, W_finite, b_finite, summed, max)
       local losses = Z[ys]
       local loss_diff = Z[ys] - Z_finite[ys]
 
-      print("softmax log", Z)
+
       print(-losses:sum())
       --print(-loss_diff:sum())
       ys:zero()
       -- Convert back to the softmax itself
       Z:exp()
-      print("softmax", Z)
+
       
       local grad = torch.DoubleTensor(nclasses):zero()
       
@@ -222,23 +222,24 @@ function mini_batch_SGD(input, output)
         --W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
       end
 
-      print("W_grad", W_grad)
-      print("b_grad", b_grad)
+
+
 
       -- Update using "weight decay"
       W:mul(1 - eta * lambda / sample_size)
       b:mul(1 - eta * lambda / sample_size)
-      print("wscaled", W)
+
 
       b_grad:mul(eta)
       W_grad:mul(eta)
-      print("b_grad scaled", b_grad)
+
 
       W:csub(W_grad)
       b:csub(b_grad)
 
-      print("W", W)
-      print("b", b)
+
+
+
 
       W_grad:zero()
       b_grad:zero()
