@@ -102,7 +102,9 @@ function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
    grad:zero()
    local correct_class = chosen_outputs[i]
    local _, max_class = Z[i]:max(1) 
-   if (Z[i][correct_class] - Z[i][max_class[1]] <= 1) then
+   local tempval = Z[i][correct_class]
+   Z[i][correct_class] = -math.huge
+   if (tempval - Z[i][max_class[1]] <= 1) then
       grad[correct_class] = -1
       grad[max_class[1]] = 1
    end
@@ -112,7 +114,6 @@ function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
 		  (torch.expand(grad:view(nclasses, 1), nclasses, nfeatures)):transpose(1,2))
    grad:mul(1 / sample_size)
    b_grad:add(b_grad, grad)
-   return W_grad, b_grad
 end
 
 function compute_softmax(softmax, Z, Z_temp, minibatch, W, b, summed, max)
@@ -206,10 +207,10 @@ function mini_batch_SGD(input, output)
 
 
       compute_ys(Z, minibatch, W, b, summed, max)
-      --compute_softmax(softmax, Z, Z_temp, minibatch, W, b, summed, max)
+      compute_softmax(softmax, Z, Z_temp, minibatch, W, b, summed, max)
       -- compute_softmax(Z_finite, Z_temp_finite, minibatch, W_finite, b_finite, summed, max)
-      local losses = Z[ys]
-      local loss_diff = Z[ys] - Z_finite[ys]
+      local losses = softmax[ys]
+      --local loss_diff = softmax[ys] - Z_finite[ys]
 
 
       print(-losses:sum())
@@ -225,11 +226,8 @@ function mini_batch_SGD(input, output)
 	 -- a = LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
 	 --print(a[2][4], loss_diff[i] / diff)
 	 -- print(torch.gt(W_grad, 0))
-        W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
+        hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
       end
-
-
-
 
       -- Update using "weight decay"
       W:mul(1 - eta * lambda / sample_size)
