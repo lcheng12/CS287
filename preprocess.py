@@ -12,11 +12,11 @@ import itertools
 
 def line_to_words(line, dataset):
     # Different preprocessing is used for these datasets.
-    if dataset not in ['SST1', 'SST2']:
+
+    if dataset in ['SST1', 'SST2']:
         clean_line = clean_str_sst(line.strip())
     else:
         clean_line = clean_str(line.strip())
-    clean_line = clean_str_sst(line.strip())
     words = clean_line.split(' ')
     words = words[1:]
     return words
@@ -89,7 +89,7 @@ def convert_data(data_name, word_to_idx, max_sent_len, dataset, ngram_limit=1, s
             sent = [1]*start_padding + sent
             #print sent
             features.append(sent)
-            
+
             lbl.append(y)
     return np.array(features, dtype=np.int32), np.array(lbl, dtype=np.int32)
 
@@ -151,10 +151,10 @@ def main(arguments):
     dataset = args.dataset
     train, valid, test = FILE_PATHS[dataset]
 
-    ngram_limit = 2
-    
+    ngram_limit = 1
+
     # Features are just the words.
-    max_sent_len, word_to_idx = get_vocab([train, valid, test], ngram_limit=ngram_limit)
+    max_sent_len, word_to_idx = get_vocab([train, valid, test], dataset, ngram_limit=ngram_limit)
 
     # Dataset name
     train_input, train_output = convert_data(train, word_to_idx, max_sent_len,
@@ -173,7 +173,7 @@ def main(arguments):
 
     C = np.max(train_output)
 
-    # KW: oh this takes care of dumping the matrix out for us! 
+    # KW: oh this takes care of dumping the matrix out for us!
     filename = args.dataset + '.hdf5'
     with h5py.File(filename, "w") as f:
         f['train_input'] = train_input
