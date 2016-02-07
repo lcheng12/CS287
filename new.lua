@@ -33,8 +33,8 @@ function main()
 
    -- Train.
    -- print("XX")
-   print(test(W, b, dummy_input, dummy_output))
-   --print(test(W, b, valid_input, valid_output))
+   --print(test(W, b, dummy_input, dummy_output))
+   print(test(W, b, valid_input, valid_output))
 
    -- Test.
 end
@@ -134,9 +134,9 @@ end
 
 function mini_batch_SGD(input, output)
    
-   local eta = 0.1
-   local lambda = 2
-   sample_size = 100
+   local eta = 1 
+   local lambda = 1 
+   sample_size = 512 
    
    local input = input
    local output = output
@@ -178,7 +178,7 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 2000 do
+   for j = 1, 20 do
       local left = ((j - 1) * sample_size + 1) % ndata + 1
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
