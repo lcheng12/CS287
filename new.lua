@@ -5,6 +5,10 @@ cmd = torch.CmdLine()
 
 -- Cmd Args
 cmd:option('-datafile', '', 'data file')
+cmd:option('-eta', 1, 'eta value')
+cmd:option('-lambda', .1, 'lambda value')
+cmd:option('-samplesize', 512, 'sample size')
+cmd:option('-iters', 50, 'number of iterations')
 cmd:option('-classifier', 'nb', 'classifier to use')
 
 -- Hyperparameters
@@ -27,12 +31,13 @@ function main()
    dummy_input = torch.IntTensor({{3,4,5,1,1},{2,3,1,1,1},{3,1,1,1,1},{2,1,1,1,1},{4,5,1,1,1}})
    dummy_output = torch.IntTensor({1,2,3,1,2})
 
-   local W, b = mini_batch_SGD(train_input, train_output)
-   -- local W, b = mini_batch_SGD(dummy_input, dummy_output)
-   -- local W, b = get_naive_bayes(train_input, train_output, .2)
+   if opt.classifier == 'nb' then 
+     W, b = get_naive_bayes(train_input, train_output, .2)
+   else
+     W, b = mini_batch_SGD(train_input, train_output)
+   end
 
    -- Train.
-   --print(test(W, b, dummy_input, dummy_output))
    print(test(W, b, valid_input, valid_output))
 
    -- Test.
@@ -129,13 +134,9 @@ function compute_ys(Z, minibatch, W, b, summed, max)
 end
 
 function mini_batch_SGD(input, output)
-   
-   local eta = 1 
-   local lambda = .1 
-   sample_size = 248 
-   --local eta = .1 
-   --local lambda = 1 
-   --sample_size = 512 
+   local eta = opt.eta 
+   local lambda = opt.lambda 
+   sample_size = opt.samplesize 
    
    local input = input
    local output = output
@@ -147,8 +148,6 @@ function mini_batch_SGD(input, output)
 
    local shuffled_output = output:index(1, shuffle)
    local shuffled_input = input:index(1, shuffle)
-
-
 
 
    -- What we're trying to estimate
@@ -171,7 +170,7 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 100 do
+   for j = 1, opt.iters do
       local left = ((j - 1) * sample_size + 1) % ndata + 1
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
@@ -192,8 +191,11 @@ function mini_batch_SGD(input, output)
       local grad = torch.DoubleTensor(nclasses):zero()
       
       for i = 1, sample_size do
-	      LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
-      --hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
+        if opt.classifier == 'lr' then
+	        LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
+        else
+          hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
+        end
       end
 
       -- Update using "weight decay"
@@ -205,6 +207,9 @@ function mini_batch_SGD(input, output)
 
       W:csub(W_grad)
       b:csub(b_grad)
+
+      W_grad:cmul(W_grad)
+      print(W_grad:sum())
 
       W_grad:zero()
       b_grad:zero()
