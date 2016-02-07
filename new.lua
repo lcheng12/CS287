@@ -130,12 +130,12 @@ end
 
 function mini_batch_SGD(input, output)
    
-   --local eta = 1 
+   local eta = 1 
+   local lambda = .1 
+   sample_size = 248 
+   --local eta = .1 
    --local lambda = 1 
    --sample_size = 512 
-   local eta = .1 
-   local lambda = 1 
-   sample_size = 512 
    
    local input = input
    local output = output
@@ -171,7 +171,7 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 200 do
+   for j = 1, 100 do
       local left = ((j - 1) * sample_size + 1) % ndata + 1
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
@@ -192,8 +192,8 @@ function mini_batch_SGD(input, output)
       local grad = torch.DoubleTensor(nclasses):zero()
       
       for i = 1, sample_size do
-	 -- LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
-        hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
+	      LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
+      --hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
       end
 
       -- Update using "weight decay"
