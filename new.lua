@@ -115,10 +115,8 @@ function hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
    return W_grad, b_grad
 end
 
-function compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
+function compute_softmax(softmax, Z, Z_temp, minibatch, W, b, summed, max)
    -- Compute Z = XW + b
-   Z:addmm(torch.expand(b, nclasses, sample_size):transpose(1,2), minibatch, W)
-
    Z_temp:copy(Z)
    
    -- Compute the log of the softmax of Z
@@ -129,7 +127,13 @@ function compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
    summed:sum(Z_temp, 2)
    summed:log()
    summed:add(max)
-   Z:csub(torch.expand(summed, sample_size, nclasses))
+   softmax:copy(Z)
+   softmax:csub(torch.expand(summed, sample_size, nclasses))
+end
+
+function compute_ys(Z, minibatch, W, b, summed, max)
+   -- Compute Z = XW + b
+   Z:addmm(torch.expand(b, nclasses, sample_size):transpose(1,2), minibatch, W)
 end
 
 function mini_batch_SGD(input, output)
@@ -167,6 +171,7 @@ function mini_batch_SGD(input, output)
    local ys = torch.ByteTensor(sample_size, nclasses)
 
    local Z = torch.DoubleTensor(sample_size, nclasses)
+   local softmax = torch.DoubleTensor(sample_size, nclasses)
    local Z_temp = torch.DoubleTensor(sample_size, nclasses)
 
    local Z_finite = torch.DoubleTensor(sample_size, nclasses)
@@ -200,7 +205,8 @@ function mini_batch_SGD(input, output)
       -- b_finite[5] = b_finite[5] + diff
 
 
-      compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
+      compute_ys(Z, minibatch, W, b, summed, max)
+      --compute_softmax(softmax, Z, Z_temp, minibatch, W, b, summed, max)
       -- compute_softmax(Z_finite, Z_temp_finite, minibatch, W_finite, b_finite, summed, max)
       local losses = Z[ys]
       local loss_diff = Z[ys] - Z_finite[ys]
@@ -216,10 +222,10 @@ function mini_batch_SGD(input, output)
       local grad = torch.DoubleTensor(nclasses):zero()
       
       for i = 1, sample_size do
-	 a = LR_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch)
+	 -- a = LR_grad(chosen_outputs, i, W_grad, b_grad, softmax, minibatch)
 	 --print(a[2][4], loss_diff[i] / diff)
 	 -- print(torch.gt(W_grad, 0))
-        --W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
+        W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
       end
 
 

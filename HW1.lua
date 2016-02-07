@@ -132,11 +132,16 @@ function compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
    Z:csub(torch.expand(summed, sample_size, nclasses))
 end
 
+function compute_ys(Z, minibatch, W, b, summed, max)
+   -- Compute Z = XW + b
+   Z:addmm(torch.expand(b, nclasses, sample_size):transpose(1,2), minibatch, W)
+end
+
 function mini_batch_SGD(input, output)
    
    local eta = 0.1
    local lambda = 200
-   sample_size = 2
+   sample_size = 5 
    
    local input = input
    local output = output
@@ -178,7 +183,7 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 2 do
+   for j = 1, 1 do
       local left = ((j - 1) * sample_size + 1) % ndata
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
@@ -200,7 +205,8 @@ function mini_batch_SGD(input, output)
       -- b_finite[5] = b_finite[5] + diff
       print("initial_W", W)
       print("initial_b", b)
-      compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
+      --compute_softmax(Z, Z_temp, minibatch, W, b, summed, max)
+      compute_ys(Z, minibatch, W, b, summed, max)
       -- compute_softmax(Z_finite, Z_temp_finite, minibatch, W_finite, b_finite, summed, max)
       local losses = Z[ys]
       local loss_diff = Z[ys] - Z_finite[ys]
@@ -216,10 +222,10 @@ function mini_batch_SGD(input, output)
       local grad = torch.DoubleTensor(nclasses):zero()
       
       for i = 1, sample_size do
-	 a = LR_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch)
+	 --a = LR_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch)
 	 --print(a[2][4], loss_diff[i] / diff)
 	 -- print(torch.gt(W_grad, 0))
-        --W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
+        W_grad, b_grad = hinge_grad(chosen_outputs, i, W_grad, b_grad, Z, minibatch, grad)
       end
 
       print("W_grad", W_grad)
