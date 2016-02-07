@@ -178,7 +178,7 @@ function mini_batch_SGD(input, output)
    -- Stores the max 
    local max = torch.DoubleTensor(sample_size, 1)
    local summed = torch.DoubleTensor(sample_size, 1)
-   for j = 1, 20 do
+   for j = 1, 200 do
       local left = ((j - 1) * sample_size + 1) % ndata + 1
       local chosen_inputs = shuffled_input:narrow(1, left, sample_size)
       local chosen_outputs = shuffled_output:narrow(1, left, sample_size)
