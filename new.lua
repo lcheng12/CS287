@@ -139,7 +139,10 @@ end
 
 function mini_batch_SGD(input, output)
    
-   local eta = 1 
+   --local eta = 1 
+   --local lambda = 1 
+   --sample_size = 512 
+   local eta = .1 
    local lambda = 1 
    sample_size = 512 
    
