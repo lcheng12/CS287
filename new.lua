@@ -26,6 +26,7 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
    test_input = f:read('test_input'):all()
+   test_output = f:read('test_output'):all()
 
 --   nclasses = 3
 --   nfeatures = 5
