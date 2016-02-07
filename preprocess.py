@@ -8,15 +8,11 @@ import h5py
 import argparse
 import sys
 import re
-<<<<<<< HEAD
-import codecs
-
-=======
 import itertools
->>>>>>> f4a5d8728d28ff15d0d1d99088ba20c31d93ae88
 
 def line_to_words(line, dataset):
     # Different preprocessing is used for these datasets.
+
     if dataset in ['SST1', 'SST2']:
         clean_line = clean_str_sst(line.strip())
     else:
@@ -40,7 +36,7 @@ def get_vocab(file_list, dataset='', ngram_limit=1):
     idx = 2
     for filename in file_list:
         if filename:
-            with codecs.open(filename, "r", encoding="latin-1") as f:
+            with open(filename, "r") as f:
                 for line in f:
                     words = line_to_words(line, dataset)
                     length = len(words)
@@ -73,7 +69,7 @@ def convert_data(data_name, word_to_idx, max_sent_len, dataset, ngram_limit=1, s
     features = []
     # KW: ends up as a 1-D array
     lbl = []
-    with codecs.open(data_name, 'r', encoding="latin-1") as f:
+    with open(data_name, 'r') as f:
         for line in f:
             words = line_to_words(line, dataset)
             # KW: y is the class
@@ -93,7 +89,7 @@ def convert_data(data_name, word_to_idx, max_sent_len, dataset, ngram_limit=1, s
             sent = [1]*start_padding + sent
             #print sent
             features.append(sent)
-            
+
             lbl.append(y)
     return np.array(features, dtype=np.int32), np.array(lbl, dtype=np.int32)
 
@@ -156,13 +152,9 @@ def main(arguments):
     train, valid, test = FILE_PATHS[dataset]
 
     ngram_limit = 1
-    
+
     # Features are just the words.
-<<<<<<< HEAD
-    max_sent_len, word_to_idx = get_vocab([train, valid, test], dataset)
-=======
-    max_sent_len, word_to_idx = get_vocab([train, valid, test], ngram_limit=ngram_limit)
->>>>>>> f4a5d8728d28ff15d0d1d99088ba20c31d93ae88
+    max_sent_len, word_to_idx = get_vocab([train, valid, test], dataset, ngram_limit=ngram_limit)
 
     # Dataset name
     train_input, train_output = convert_data(train, word_to_idx, max_sent_len,
@@ -181,7 +173,7 @@ def main(arguments):
 
     C = np.max(train_output)
 
-    # KW: oh this takes care of dumping the matrix out for us! 
+    # KW: oh this takes care of dumping the matrix out for us!
     filename = args.dataset + '.hdf5'
     with h5py.File(filename, "w") as f:
         f['train_input'] = train_input
