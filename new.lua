@@ -10,6 +10,7 @@ cmd:option('-lambda', .1, 'lambda value')
 cmd:option('-samplesize', 512, 'sample size')
 cmd:option('-iters', 50, 'number of iterations')
 cmd:option('-classifier', 'nb', 'classifier to use')
+cmd:option('-alpha', 0.2, 'alpha')
 
 -- Hyperparameters
 -- ...
@@ -26,6 +27,7 @@ function main()
    train_input = f:read('train_input'):all()
    train_output = f:read('train_output'):all()
    test_input = f:read('test_input'):all()
+   test_input = f:read('test_output'):all()
 
 --   nclasses = 3
 --   nfeatures = 5
@@ -35,13 +37,13 @@ function main()
    -- local W, b = mini_batch_SGD(train_input, train_output)
    -- local W, b = mini_batch_SGD(dummy_input, dummy_output)
    if opt.classifier == 'nb' then 
-     W, b = get_naive_bayes(train_input, train_output, .2)
+     W, b = get_naive_bayes(train_input, train_output, opt.alpha)
    else
      W, b = mini_batch_SGD(train_input, train_output)
    end
 
    -- Train.
-   print(test(W, b, valid_input, valid_output))
+   print(test(W, b, test_input, test_output))
    do_kaggle(W, b, test_input)
    -- Test.
 end
@@ -58,18 +60,13 @@ end
 function make_predictions(W, b, input)
    local input = input
    local size = input:size(1)
-   print(size)
-   print(input:size())
    local output = torch.Tensor(size)
    local temp = torch.DoubleTensor(#input[1])
    for i = 1, size do
       -- gets features --
       truncated = input[{{i,i},{1, input[i]:gt(1):sum()}}][1]
       -- basically multiplies by feature vector --
-      --print('wx', W:index(1,truncated:long()):sum(1):view(nclasses))
-      --print('b', b)
       temp:add(W:index(1,truncated:long()):sum(1):view(nclasses), b)
-      -- print(temp)
       -- gets output class --
       local maxval, argmax = temp:max(1)
       output[i] = argmax[1]
@@ -86,7 +83,6 @@ function test(W, b, input, output)
 	 num_correct = num_correct + 1
       end
    end
-   -- print(size, num_correct)
    return num_correct/size
 end
 
@@ -201,9 +197,9 @@ function mini_batch_SGD(input, output)
 
       compute_ys(Z, minibatch, W, b, summed, max)
       compute_softmax(softmax, Z, Z_temp, minibatch, W, b, summed, max)
-      local losses = softmax[ys]
+      --local losses = softmax[ys]
 
-      print(-losses:sum())
+      --print(-losses:sum())
       ys:zero()
 
       -- Convert back to the softmax itself
@@ -230,13 +226,16 @@ function mini_batch_SGD(input, output)
       b:csub(b_grad)
 
       W_grad:cmul(W_grad)
-      print(W_grad:sum())
+      --print(W_grad:sum())
 
       W_grad:zero()
       b_grad:zero()
       Z:zero()
       Z_temp:zero()
       minibatch:zero()
+      if eta > 0.2 then
+        eta = 0.98*eta
+      end
    end
 
    return W, b
@@ -304,7 +303,7 @@ function k_fold(k, training_in, training_out)
       curr_input = torch.cat(training_in[{{1, ranges[i][1] - 1}, {}}], training_in[{{ranges[i][2] + 1, ranges[k][2]}, {}}], 1)
       curr_output = torch.cat(training_out[{{1, ranges[i][1] - 1}}], training_out[{{ranges[i][2] + 1, ranges[k][2]}}], 1)
     end
-    local W, b = get_naive_bayes(curr_input, curr_output, .2)
+    local W, b = get_naive_bayes(curr_input, curr_output, opt.alpha)
     local p, c, t = test(W, b, training_in[{{ranges[i][1], ranges[i][2]},{}}], training_out[{{ranges[i][1], ranges[i][2]}}])
     correct = correct + c
     total = total + t
