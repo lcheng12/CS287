@@ -165,7 +165,7 @@ def main(arguments):
         valid_input, valid_output = convert_data(valid, word_to_idx, max_sent_len,
                                                  dataset, ngram_limit)
     if test:
-        test_input, _ = convert_data(test, word_to_idx, max_sent_len,
+        test_input, test_output = convert_data(test, word_to_idx, max_sent_len,
                                      dataset, ngram_limit)
 
     V = len(word_to_idx) + 1
@@ -183,6 +183,7 @@ def main(arguments):
             f['valid_output'] = valid_output
         if test:
             f['test_input'] = test_input
+            f['test_output'] = test_output
         f['nfeatures'] = np.array([V], dtype=np.int32)
         f['nclasses'] = np.array([C], dtype=np.int32)
 
